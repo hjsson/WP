@@ -1,17 +1,16 @@
 package co.kr.fvn.wp;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.TargetApi;
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +24,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Timer;
@@ -32,11 +33,12 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button btn_reset,btn_edit,btn_insert,btn_start,btn_stop,btn_continue,btn_washer,btn_drain,btn_vent,btn_conn,btn_ble_conn;
+    private Button btn_reset,btn_edit,btn_insert,btn_start,btn_stop,btn_continue,btn_washer,btn_drain,btn_vent,btn_ble_conn;
     private EditText et_set_top_cnt,et_set_pump_cnt,et_set_volt,et_set_volt_dec,et_set_am,et_set_am_dec,et_set_on,et_set_off,et_set_delay,et_set_flooding;
-    private TextView tv_time,tv_total_cnt,tv_top_state,tv_top_volt,tv_top_am;
+    private TextView tv_time,tv_total_cnt,tv_top_state,tv_top_volt,tv_top_am,tv_wm,tv_fm,tv_dm,btn_conn;
     private String sepa = ":";
-
+    private String readData = "";
+    private ProgressDialog asyncDialog;
     // Debugging
     private static final String TAG = "MainActivity";
     private String mailTxt = "";
@@ -97,7 +99,10 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case BleManager.STATE_CONNECTED:
                     setStatus( getString(R.string.title_connected_to, mConnectedDeviceName) );
+                    asyncDialog.dismiss();
                     Toast.makeText(getApplicationContext(), "Connected to "+mConnectedDeviceName,Toast.LENGTH_SHORT).show();
+                    btn_ble_conn.setText("BLE 통신중");
+                    btn_ble_conn.setEnabled(false);
                     break;
                 case MESSAGE_READ:
                     /*byte[] readBuf = (byte[]) msg.obj;
@@ -106,10 +111,10 @@ public class MainActivity extends AppCompatActivity {
                     Log.d( TAG, "readMessage : " + readMessage + ", " + HexUtils.hexToString( readBuf, 0, readBuf.length) + ", length : " + readBuf.length );*/
                     if(msg.obj != null) {
                         String readMessage = (String) msg.obj;
-                        //Log.d( TAG, "readMessage : " + readMessage);
+                        Log.d( TAG, "readMessage : " + readMessage);
                         //addValue( readMessage ); 데이터 셋팅팅
                         try{
-                            setData(readMessage.split(":"));
+                            setData(readMessage);
                         }catch(Exception e){
                             e.printStackTrace();
                         }
@@ -133,8 +138,9 @@ public class MainActivity extends AppCompatActivity {
                         String readMessageLe = (String) msg.obj;
                         //Log.d( TAG, "readMessage : " + readMessageLe);
                         //addValue( readMessageLe );
+                        Log.d( TAG, "readMessageLe : " + readMessageLe);
                         try{
-                            setData(readMessageLe.split(":"));
+                            setData(readMessageLe);
                         }catch(Exception e){
                             e.printStackTrace();
                         }
@@ -151,15 +157,45 @@ public class MainActivity extends AppCompatActivity {
         btnOnClickEvent();
         setBle();
     }
-    public void setData(String[] dataVal) {
-        if(dataVal.length == 5){
-            tv_total_cnt.setText(dataVal[0].substring(2));
-            tv_top_volt.setText(dataVal[1]);
-            tv_top_am.setText(dataVal[2]);
-            tv_top_state.setText(dataVal[3]);
-            btn_conn.setText(dataVal[4]);
-        }else{
-            Toast.makeText(this, "모듈 데이터 오류~!", Toast.LENGTH_SHORT).show();
+    public void setData(String dataVal) {
+        //$I10:13.1:5.1:PASS:ING:DM
+        Log.d("=====",""+dataVal.toString());
+
+        readData = readData+dataVal;
+
+        if(readData.indexOf("\r") > -1){
+            readData = readData.replaceAll("\r","");
+            readData = readData.replaceAll("\n","");
+            String[] allVal = readData.split(":");
+            if(allVal.length == 6){
+                tv_total_cnt.setText(allVal[0].substring(2));
+                tv_top_volt.setText(allVal[1]);
+                tv_top_am.setText(allVal[2]);
+                tv_top_state.setText(allVal[3]);
+                btn_conn.setText(allVal[4]);
+
+                tv_wm.setBackgroundResource(R.color.colorGra);
+                tv_wm.setTextColor(Color.parseColor("#000000"));
+                tv_fm.setBackgroundResource(R.color.colorGra);
+                tv_fm.setTextColor(Color.parseColor("#000000"));
+                tv_dm.setBackgroundResource(R.color.colorGra);
+                tv_dm.setTextColor(Color.parseColor("#000000"));
+                if(allVal[5].equals("WM")){ //진행중인곳
+                    tv_wm.setBackgroundResource(R.color.colorGreen);
+                    tv_wm.setTextColor(Color.parseColor("#D81B60"));
+                }
+                if(allVal[5].equals("FM")){ //진행중인곳
+                    tv_fm.setBackgroundResource(R.color.colorGreen);
+                    tv_fm.setTextColor(Color.parseColor("#D81B60"));
+                }
+                if(allVal[5].equals("DM")){ //진행중인곳
+                    tv_dm.setBackgroundResource(R.color.colorGreen);
+                    tv_dm.setTextColor(Color.parseColor("#D81B60"));
+                }
+            }else{
+                Toast.makeText(this, "모듈 데이터 오류~!", Toast.LENGTH_SHORT).show();
+            }
+            readData = "";
         }
     }
     private void setBle() {
@@ -288,12 +324,17 @@ public class MainActivity extends AppCompatActivity {
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice( address );
         mConnectedDeviceName = device.getName();
         mBleLeManager.connectGatt(getApplicationContext(), true, device);
+        Log.d( TAG, "2222222222 " + device );
     }
 
     public void onActivityResult( int requestCode, int resultCode, Intent data ) {
         super.onActivityResult(requestCode, resultCode, data);
         if (D) Log.d(TAG, "onActivityResult " + requestCode);
-
+        asyncDialog = new ProgressDialog(MainActivity.this);
+        asyncDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        asyncDialog.setMessage("BLE 연결중 입니다...");
+        asyncDialog.show();
+        Log.d(TAG, "onActivityResult=== " + requestCode);
         switch (requestCode) {
             case REQUEST_CONNECT_DEVICE:    //연결성공시
                 // When DeviceListActivity returns with a device to connect
@@ -379,6 +420,9 @@ public class MainActivity extends AppCompatActivity {
         tv_top_volt = findViewById(R.id.tv_top_volt);
         tv_top_am = findViewById(R.id.tv_top_am);
         tv_time = findViewById(R.id.tv_time);
+        tv_wm = findViewById(R.id.tv_wm);
+        tv_fm = findViewById(R.id.tv_fm);
+        tv_dm = findViewById(R.id.tv_dm);
 
         et_set_top_cnt = findViewById(R.id.et_set_top_cnt);
         et_set_pump_cnt = findViewById(R.id.et_set_pump_cnt);
@@ -448,8 +492,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     private void writeToBle(String command) {
+        Log.d("=======",""+command);
         command = command+"\r";
-        mBleClasicService.write(command.getBytes());
+        //mBleClasicService.write(command.getBytes());
+        mBleLeManager.write(null,command.getBytes());
         //mSerial.write(command.getBytes(), command.length());
     }
     private void btnOnClickEvent() {
@@ -463,10 +509,10 @@ public class MainActivity extends AppCompatActivity {
         btn_reset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() != 3) {
-                    Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
-                }else{
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$CRESET");
+                }else{
+                    Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -556,7 +602,7 @@ public class MainActivity extends AppCompatActivity {
 
                     String saveVal = etTopCnt+sepa+etPump+sepa+etOn+sepa+etOff+sepa+etDelay+sepa+etFlood+sepa+etVolt+"."+etVoltDec+sepa+etAm+"."+etAmDec;
 
-                    if(mBleClasicService.getState() == 3) {
+                    if(mBleClasicService.getState() == 1) {
                         writeToBle("$S"+saveVal);
                     }else{
                         Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -583,7 +629,9 @@ public class MainActivity extends AppCompatActivity {
         btn_start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+
+                Log.d("===",""+mBleClasicService.getState());
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$CSTART");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -593,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
         btn_stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$CPAUSE");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -603,7 +651,7 @@ public class MainActivity extends AppCompatActivity {
         btn_continue.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$CRESUME");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -613,7 +661,7 @@ public class MainActivity extends AppCompatActivity {
         btn_washer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$TWASHER");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -623,7 +671,7 @@ public class MainActivity extends AppCompatActivity {
         btn_drain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$TINPUT");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
@@ -633,19 +681,13 @@ public class MainActivity extends AppCompatActivity {
         btn_vent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mBleClasicService.getState() == 3) {
+                if(mBleClasicService.getState() == 1) {
                     writeToBle("$TOUTPUT");
                 }else{
                     Toast.makeText(MainActivity.this, "모듈의 BLE 와 연결되지 않았습니다.", Toast.LENGTH_LONG).show();
                 }
             }
         });
-        /*btn_conn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });*/
     }
     //블루투스 LE 핸들러 BleManager에서 받는곳
     class ServiceHandler extends Handler{

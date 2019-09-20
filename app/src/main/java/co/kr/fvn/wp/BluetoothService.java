@@ -189,12 +189,13 @@ public class BluetoothService {
         // Synchronize a copy of the ConnectedThread
         synchronized( this )
         {
-            if( mState != STATE_CONNECTED ) 
-            	return;
-            
+            if( mState != STATE_CONNECTED ) {
+                Log.d(TAG, "=======11=====: " + mState);
+                return;
+            }
             r = mConnectedThread;
         }
-        
+        Log.d(TAG, "============: " + mState);
         // Perform the write unsynchronized
         r.write( out );
     }
