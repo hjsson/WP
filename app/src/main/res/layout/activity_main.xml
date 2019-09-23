@@ -417,27 +417,7 @@
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
-                        android:layout_weight="33"/>
-                    <EditText
-                        android:id="@+id/et_set_delay"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:hint="0"
-                        android:inputType="number"
-                        android:maxLength="3"
-                        android:background="@color/colorWhite"
-                        android:layout_weight="15"/>
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:text="분"
-                        android:layout_weight="5"/>
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="18"/>
+                        android:layout_weight="31"/>
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
@@ -459,6 +439,26 @@
                         android:layout_height="match_parent"
                         android:gravity="center"
                         android:text="회"
+                        android:layout_weight="5"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="15"/>
+                    <EditText
+                        android:id="@+id/et_set_delay"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:hint="0"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:background="@color/colorWhite"
+                        android:layout_weight="15"/>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="분"
                         android:layout_weight="5"/>
                 </LinearLayout>
                 <LinearLayout
