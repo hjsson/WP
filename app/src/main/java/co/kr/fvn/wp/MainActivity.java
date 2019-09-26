@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView tv_time,tv_total_cnt,tv_top_state,tv_top_volt,tv_top_am,tv_wm,tv_fm,tv_dm,btn_conn;
     private String sepa = ":";
     private String readData = "";
+    private String finalData = "";
+
     private ProgressDialog asyncDialog;
     private byte[] tempCom;
     private String tempSpiVal="";
@@ -73,7 +75,8 @@ public class MainActivity extends AppCompatActivity {
         public void handleMessage( Message msg )
         {
             //super.handleMessage( msg );
-            if( D ) Log.i( TAG, "Handler_msg: " + msg.what );
+            //Log.i( TAG, "Handler_msg: " + msg.what );
+            //Log.i( TAG, "Handler_msg: " + msg.arg1 );
             switch( msg.what )
             {
                 case MESSAGE_STATE_CHANGE:
@@ -121,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d( TAG, "readMessage : " + readMessage + ", " + HexUtils.hexToString( readBuf, 0, readBuf.length) + ", length : " + readBuf.length );*/
                     if(msg.obj != null) {
                         String readMessage = (String) msg.obj;
-                        Log.d( TAG, "readMessage : " + readMessage);
+                        //Log.d( TAG, "readMessage : " + readMessage);
                         //addValue( readMessage ); 데이터 셋팅팅
                         try{
                             setData(readMessage);
@@ -146,6 +149,7 @@ public class MainActivity extends AppCompatActivity {
                 case MESSAGE_LE_READ:
                     if(msg.obj != null) {
                         String readMessageLe = (String) msg.obj;
+                        //Log.d( TAG, "readMessage : " + readMessageLe);
                         //Log.d( TAG, "readMessage : " + readMessageLe);
                         //addValue( readMessageLe );
                         //Log.d( TAG, "readMessageLe : " + readMessageLe);
@@ -172,16 +176,20 @@ public class MainActivity extends AppCompatActivity {
         if(mBleLeManager == null){
             Toast.makeText(getApplicationContext(), "BLE 연결을 먼저해주세요.",
                     Toast.LENGTH_SHORT).show();
+            btn_ble_conn.setText("BLE 찾기");
+            btn_ble_conn.setEnabled(true);
             return false;
         }
         Log.d("=======",""+mBleLeManager.getState());
         if(mBleLeManager.getState() != 16){
             Toast.makeText(getApplicationContext(), "BLE 연결을 먼저해주세요.",
                     Toast.LENGTH_SHORT).show();
+            btn_ble_conn.setText("BLE 찾기");
+            btn_ble_conn.setEnabled(true);
             return false;
         }
         command = command+"@"+"\r"; //블루투스 20바이트만 전송되서 스타트 앤드 붙임
-        Log.d("=======",""+command);
+        Log.d("====SEND MSG===>",""+command);
         //mBleClasicService.write(command.getBytes());
         tempCom = command.getBytes();
         if(tempCom.length > 19){
@@ -211,13 +219,14 @@ public class MainActivity extends AppCompatActivity {
     }
     public void setData(String dataVal) {
         //$I10:13.1:5.1:PASS:ING:DM@     $S111:222:11:333:444:55:66.6:77.7@
-        Log.d("=====",""+dataVal);
+        //Log.d("=====",""+dataVal);    //finalData 특정 플레그가 오면 던져준다
         readData = readData+dataVal;
         //Log.d("=====",""+readData);
         if(readData.indexOf("$") > -1 && readData.indexOf("@") > -1){
             readData = readData.substring(readData.indexOf("$"),readData.indexOf("@"));
             readData = readData.replaceAll("@","");
-            //Log.d("=====",""+readData);
+            finalData = readData;
+            Log.d("====READ MSG===>",""+readData);
             String[] allVal = readData.split(":");
             if(allVal.length == 6){
                 tv_total_cnt.setText(allVal[0].substring(2));
