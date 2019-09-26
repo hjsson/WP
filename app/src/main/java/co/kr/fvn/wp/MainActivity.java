@@ -218,17 +218,18 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
     public void setData(String dataVal) {
-        //$I10:13.1:5.1:PASS:ING:DM@     $S111:222:11:333:444:55:66.6:77.7@
+        //$I10:13.1:5.1:PASS:ING:DM@     $S111:222:11:333:444:55:66.6:77.7@  $T111:222:11:333:444:55:66.6:77.7@
         //Log.d("=====",""+dataVal);    //finalData 특정 플레그가 오면 던져준다
         readData = readData+dataVal;
-        //Log.d("=====",""+readData);
+
         if(readData.indexOf("$") > -1 && readData.indexOf("@") > -1){
+            Log.d("====READ MSG===>",""+readData);
+            String tempSvVal = readData.substring(readData.indexOf("@")+1);
             readData = readData.substring(readData.indexOf("$"),readData.indexOf("@"));
             readData = readData.replaceAll("@","");
-            finalData = readData;
-            Log.d("====READ MSG===>",""+readData);
             String[] allVal = readData.split(":");
-            if(allVal.length == 6){
+
+            if(allVal[0].indexOf("$I") > -1){
                 tv_total_cnt.setText(allVal[0].substring(2));
                 tv_top_volt.setText(allVal[1]);
                 tv_top_am.setText(allVal[2]);
@@ -260,8 +261,7 @@ public class MainActivity extends AppCompatActivity {
                     tv_dm.setBackgroundResource(R.color.colorGreen);
                     tv_dm.setTextColor(Color.parseColor("#D81B60"));
                 }
-            }else if(allVal.length == 8){   //기본 셋팅값
-
+            }else if(allVal[0].indexOf("$S") > -1){   //기본 셋팅값
                 et_set_top_cnt.setText(allVal[0].substring(2));
                 et_set_pump_cnt.setText(allVal[1]);
                 et_set_on.setText(allVal[2]);
@@ -292,10 +292,21 @@ public class MainActivity extends AppCompatActivity {
                 et_set_off.setEnabled(false);
                 et_set_delay.setEnabled(false);
                 et_set_flooding.setEnabled(false);
+            }else if(allVal[0].indexOf("$T") > -1){
+                finalData = readData.substring(2);
+                Toast.makeText(this, "T 명령이 왔습니다 데이터 저장 OK ==>"+readData+"@", Toast.LENGTH_SHORT).show();
+            }else if(allVal[0].indexOf("$RSTATUS") > -1){
+                if("".equals(finalData)){
+                    writeToBle("$STATUS:0:0:0:0:0:0:0:0:0:0");
+                    Toast.makeText(this, "T 명령 기본값 전송 OK ==>"+"$STATUS:0:0:0:0:0:0:0:0:0:0@", Toast.LENGTH_SHORT).show();
+                }else{
+                    writeToBle("$STATUS:"+finalData);
+                    Toast.makeText(this, "T 명령 전송하였습니다 =>"+"$STATUS:"+finalData+"@", Toast.LENGTH_SHORT).show();
+                }
             }else{
-                Toast.makeText(this, "모듈 데이터 오류~!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "모듈 데이터가 손상되었습니다.", Toast.LENGTH_SHORT).show();
             }
-            readData = "";
+            readData = tempSvVal;
         }
     }
     private void setBle() {
